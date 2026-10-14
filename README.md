@@ -39,8 +39,6 @@ Correct. "Schizoid disorder" is schizoid personality disorder, and nothing else 
 
 I'll hold question 2 until you ask for it.
 
----
-
 **Upper-Confidence-Bound (UCB) action selection**
 
 The notes give only a brief statement of UCB. I've filled in the standard formalism (Auer et al.'s UCB1, as presented in Sutton and Barto), which the notes don't contain.
