@@ -82,18 +82,3 @@ more than 2 turns.
 - **folder-stats** pairs instructions with a script. Use a script for work
   that must be exact (counting, math, parsing, file conversion), where a
   model guessing would be wrong.
-
-## Exercises
-
-1. **Break the trigger.** Change study-quiz's description to just "A quiz
-   skill." and ask "Test me on my notes." Does it still load? Put the full
-   description back. You've just seen why descriptions matter.
-2. **Write your own instructions-only skill.** Some ideas: `explain-simply`
-   (explain a note as if to a beginner, with one analogy and one check
-   question), or `todo-review` (go through todo.md and suggest what to do
-   next).
-3. **Write a skill with a script.** For example, `find-todos` could use a
-   script that finds every unchecked `- [ ]` line across all files. Remember
-   that the folder path arrives as `sys.argv[1]`.
-4. **Toward your portfolio project:** sketch a `dsm5-study` skill. What would
-   its description say, and what goes in `SKILL.md` versus reference files?
