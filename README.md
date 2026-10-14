@@ -6,9 +6,69 @@ them, and loads task-specific "skills" on demand, including a DSM-5-TR
 study quiz.
 
 ## Demo
-(Paste a short, real transcript from your terminal: e.g. "Quiz me on
-personality disorders", one question, a loose answer like "OCD", and the
-agent's grading. Keep the [tool] lines in; they show the agent working.)
+Agent ready. Asking about files in 'sample_docs'. Type 'quit' to exit.
+
+You: quiz me on disorders
+  [context] input tokens this request: 1535
+  [tool] load_skill({'name': 'dsm5-study'})
+  [context] input tokens this request: 2089
+  [tool] load_skill({'name': 'dsm5-study', 'file': 'disorders.json'})
+  [context] input tokens this request: 9082
+
+Agent: **DSM-5-TR quiz, question 1**
+**Score: 0/0**
+
+Which disorder matches these key features?
+
+- Disinterested in relationships
+- Disinterested in sexual experiences
+- Takes pleasure in few activities, if any
+
+Name the disorder. You can say "quiz me on personality disorders" or another category if you want to narrow the topics.
+
+You: schizoid disorder, now explain ucb to me as if i were an expert
+  [context] input tokens this request: 9374
+  [tool] load_skill({'name': 'explain-complexly'})
+  [tool] search_files({'word': 'ucb'})
+  [context] input tokens this request: 9787
+  [tool] read_file({'path': 'study_notes.txt'})
+  [context] input tokens this request: 10019
+
+Agent: **Quiz: question 1 result**
+Correct. "Schizoid disorder" is schizoid personality disorder, and nothing else in the file has that name. **Score: 1/1.**
+
+I'll hold question 2 until you ask for it.
+
+---
+
+**Upper-Confidence-Bound (UCB) action selection**
+
+The notes give only a brief statement of UCB. I've filled in the standard formalism (Auer et al.'s UCB1, as presented in Sutton and Barto), which the notes don't contain.
+
+**Setting.** UCB addresses the exploration–exploitation dilemma in the multi-armed bandit problem. The agent must balance exploiting its current value estimates against gathering information to improve them.
+
+**Selection rule.** At time *t*, the agent selects
+
+A_t = argmax_a [ Q_t(a) + c · √( ln t / N_t(a) ) ]
+
+- **Q_t(a)** is the current estimate of the value of action *a*. It is the exploitation term.
+- **N_t(a)** is the number of times *a* has been selected so far. The bonus grows as this shrinks.
+- **c > 0** sets the degree of exploration.
+- **√(ln t / N_t(a))** is the uncertainty term. It is an upper confidence bound on the estimate's deviation from the true mean, derived from a Hoeffding-type concentration inequality. By convention, an action with N_t(a) = 0 is treated as maximizing.
+
+**Principle.** UCB follows optimism in the face of uncertainty. The quantity Q + bonus is a plausible upper bound on an action's true value. An action is selected either because its estimate is high or because its estimate is poorly constrained by data.
+
+**Contrast with ε-greedy, as stated in your notes.**
+- ε-greedy explores undirected. With probability ε it samples uniformly, regardless of how much is known about each action. It therefore keeps sampling actions that are clearly inferior.
+- UCB explores directed. The bonus is a deterministic function of visitation counts, so exploration targets epistemic uncertainty. As N_t(a) grows, the bonus decays and the policy becomes greedy on its own, without an annealing schedule.
+- In the stationary case, UCB attains logarithmic regret, O(ln t). Fixed-ε ε-greedy incurs linear regret.
+
+**Link to the other notes.**
+- The bonus depends on N_t(a), which presupposes sample-average-style bookkeeping. That suits stationary problems, as the first paragraph of your notes describes.
+- In nonstationary settings, a count-based bonus decays inappropriately. Estimates grow stale while the bonus keeps shrinking, so exploration ceases when it is most needed. Remedies include discounted UCB and sliding-window UCB. These are only partly compatible with constant step-size updates, which the notes recommend for tracking drift.
+
+You: 
+
 
 ## Features
 - Tool use: list, read and search files; run Python scripts in a sandbox
