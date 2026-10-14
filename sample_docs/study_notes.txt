@@ -1,0 +1,12 @@
+Study notes: Reinforcement Learning
+
+Sample-average methods weight every past reward equally. They work well when
+the problem is stationary (reward probabilities never change).
+
+Constant step-size methods (alpha = 0.1, for example) weight recent rewards
+more heavily. They track nonstationary problems better because old rewards
+fade out exponentially.
+
+Upper-Confidence-Bound (UCB) action selection adds an exploration bonus to
+actions that have been tried less often, instead of exploring at random like
+epsilon-greedy.
