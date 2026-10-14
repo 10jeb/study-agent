@@ -72,7 +72,7 @@ Requires Python 3.10 or newer and an API key from the
 [Claude Console](https://console.anthropic.com).
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/study-agent.git
+git clone https://github.com/10jeb/study-agent.git
 cd study-agent
 python3 -m venv .venv
 source .venv/bin/activate              # Windows: .venv\Scripts\activate
