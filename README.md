@@ -69,17 +69,26 @@ You:
 
 
 ## Features
-- Tool use: list, read and search files; run Python scripts in a sandbox
+- Tool use: list, read and search files; run Python scripts, which must be
+  in a `scripts/` folder and stop after 30 seconds
 - Context management: trims history and folds dropped turns into a
   running summary
 - Skills: SKILL.md folders loaded with progressive disclosure
-- Safety: path checks block access outside the folder; scripts time out
+- Safety limits:
+  - File tools resolve every path, including symlinks, and refuse anything
+    outside the chosen folder.
+  - The agent stops after 15 rounds of tool use per question, so a confused
+    model can't loop and run up API cost.
+  - Scripts are **not** sandboxed. The path check limits *which* script
+    runs, not what it does: a script can read or write any file your user
+    account can. Only put scripts you trust in `scripts/`.
 
 ## How it works
 
 The agent runs a loop: it sends the conversation to the model, and if the
 model asks to use a tool, the agent runs it, sends back the result, and asks
-again, until the model gives a final answer.
+again, until the model gives a final answer or the loop reaches
+`MAX_TOOL_ROUNDS` (15).
 
 ```
 You ask a question
@@ -121,6 +130,7 @@ skills/               Reusable skills, one folder each
   dsm5-study/         DSM-5-TR quiz built on disorders.json
 sample_docs/          Example folder for the agent to work on
   scripts/            Scripts the agent can run with run_script
+    recent_files.py   Lists the 5 most recently modified files
 requirements.txt      Python dependencies
 ```
 
@@ -140,8 +150,8 @@ python agent.py sample_docs
 ```
 
 To use your own files, pass a different folder: `python agent.py ~/my-notes`.
-Type `quit` to exit. The model and history length are set at the top of
-`agent.py` (`MODEL`, `MAX_HISTORY_TURNS`).
+Type `quit` to exit. The model, history length and tool-round limit are set
+at the top of `agent.py` (`MODEL`, `MAX_HISTORY_TURNS`, `MAX_TOOL_ROUNDS`).
 
 ## Lessons learned
 - Thinking blocks are cryptographically tied to their conversation;

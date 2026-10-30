@@ -33,6 +33,8 @@ MODEL = "claude-sonnet-5-5"   # check docs.claude.com for current model names
 MAX_TOKENS = 1024             # max length of each model reply
 MAX_HISTORY_TURNS = 10        # how many user questions to keep in memory
 MAX_FILE_CHARS = 20_000       # cap on how much of a file we send back
+MAX_TOOL_ROUNDS = 15          # max tool-use rounds per question, so a
+                              # confused model can't loop and run up API cost
 
 # Skills live next to this file, separate from the user's data folder.
 SKILLS_DIR = (Path(__file__).parent / "skills").resolve()
@@ -123,7 +125,7 @@ TOOLS = [
             "properties": {
                 "name": {
                     "type": "string",
-                    "description": "File name of the script, e.g. 'hello.py'",
+                    "description": "File name of the script, e.g. 'recent_files.py'",
                 },
                 "skill": {
                     "type": "string",
@@ -179,12 +181,25 @@ class FileTools:
 
     def _visible_files(self) -> list[Path]:
         """All files in the folder, skipping hidden ones like macOS's
-        .DS_Store, which are noise to the model and not really text."""
-        return [
-            p for p in sorted(self.root.rglob("*"))
-            if p.is_file()
-            and not any(part.startswith(".") for part in p.relative_to(self.root).parts)
-        ]
+        .DS_Store, which are noise to the model and not really text.
+
+        Every path also goes through _safe_path(), which resolves symlinks.
+        Without that, a symlink inside the folder pointing to a private file
+        (e.g. notes.txt -> ~/.ssh/id_rsa) would let search_files read its
+        lines and list_files report its size, even though read_file blocks it.
+        """
+        files = []
+        for p in sorted(self.root.rglob("*")):
+            rel = p.relative_to(self.root)
+            if any(part.startswith(".") for part in rel.parts):
+                continue
+            try:
+                target = self._safe_path(str(rel))
+            except ValueError:
+                continue  # symlink pointing outside the folder: skip it
+            if target.is_file():
+                files.append(p)
+        return files
 
     def list_files(self) -> str:
         files = [
@@ -473,7 +488,7 @@ def ask(client, tools: FileTools, history: list, question: str, summary: str = "
             f"Summary of the earlier conversation:\n{summary}"
         )
 
-    while True:
+    for _ in range(MAX_TOOL_ROUNDS):
         response = client.messages.create(
             model=MODEL,
             max_tokens=MAX_TOKENS,
@@ -512,6 +527,16 @@ def ask(client, tools: FileTools, history: list, question: str, summary: str = "
             })
         history.append({"role": "user", "content": results})
         # Loop again so the model can use the results.
+
+    # The model kept asking for tools without ever giving an answer. Record
+    # that in history so the conversation still alternates user/assistant
+    # and the next question starts cleanly, then report the error.
+    message = (
+        f"Error: stopped after {MAX_TOOL_ROUNDS} rounds of tool use without "
+        "a final answer. Try asking a narrower question."
+    )
+    history.append({"role": "assistant", "content": message})
+    return message
 
 
 def main():
