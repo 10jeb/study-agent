@@ -6,6 +6,8 @@ them, and loads task-specific "skills" on demand, including a DSM-5-TR
 study quiz.
 
 ## Demo
+
+```text
 Agent ready. Asking about files in 'sample_docs'. Type 'quit' to exit.
 
 You: quiz me on disorders
@@ -66,7 +68,7 @@ A_t = argmax_a [ Q_t(a) + c · √( ln t / N_t(a) ) ]
 - In nonstationary settings, a count-based bonus decays inappropriately. Estimates grow stale while the bonus keeps shrinking, so exploration ceases when it is most needed. Remedies include discounted UCB and sliding-window UCB. These are only partly compatible with constant step-size updates, which the notes recommend for tracking drift.
 
 You: 
-
+```
 
 ## Features
 - Tool use: list, read and search files; run Python scripts, which must be
