@@ -155,6 +155,18 @@ To use your own files, pass a different folder: `python agent.py ~/my-notes`.
 Type `quit` to exit. The model, history length and tool-round limit are set
 at the top of `agent.py` (`MODEL`, `MAX_HISTORY_TURNS`, `MAX_TOOL_ROUNDS`).
 
+## Tests
+
+The tests use a fake model client, so they need no API key and make no
+network calls.
+
+```bash
+python -m unittest discover tests -v
+```
+
+They cover the path checks (including symlinks), history trimming and
+summarizing, and the cap on tool-use rounds.
+
 ## Lessons learned
 - Thinking blocks are cryptographically tied to their conversation;
   trimming history broke them until I stripped them.
