@@ -1,5 +1,7 @@
 # Study Agent
 
+[![Tests](https://github.com/10jeb/study-agent/actions/workflows/tests.yml/badge.svg)](https://github.com/10jeb/study-agent/actions/workflows/tests.yml)
+
 A Python AI agent built on the Anthropic API that reads, searches and runs
 scripts over a folder of files, remembers long conversations by summarizing
 them, and loads task-specific "skills" on demand, including a DSM-5-TR
@@ -84,6 +86,8 @@ You:
   - Scripts are **not** sandboxed. The path check limits *which* script
     runs, not what it does: a script can read or write any file your user
     account can. Only put scripts you trust in `scripts/`.
+- Tested: unit tests with a fake model client run on every push, and a
+  benchmark measures how much trimming cuts input tokens
 
 ## How it works
 
@@ -130,9 +134,14 @@ skills/               Reusable skills, one folder each
   folder-stats/       Counts files, lines and words with a script
   find-todos/         Lists unchecked "- [ ]" items across files
   dsm5-study/         DSM-5-TR quiz built on disorders.json
+  explain-complexly/  Explains a topic at an expert level
 sample_docs/          Example folder for the agent to work on
   scripts/            Scripts the agent can run with run_script
     recent_files.py   Lists the 5 most recently modified files
+tests/                Unit tests that use a fake model client
+benchmarks/           Token benchmark for history trimming
+.github/workflows/    GitHub Actions: runs the tests on every push
+SKILLS.md             How skills work and how to write one
 requirements.txt      Python dependencies
 ```
 
@@ -165,7 +174,41 @@ python -m unittest discover tests -v
 ```
 
 They cover the path checks (including symlinks), history trimming and
-summarizing, and the cap on tool-use rounds.
+summarizing, and the cap on tool-use rounds. GitHub Actions runs them on
+every push, on the oldest and newest supported Python versions; the badge at
+the top of this page shows the latest result.
+
+## Benchmark
+
+`benchmarks/token_benchmark.py` measures what history trimming saves. It
+replays the same scripted 30-turn conversation twice, once resending the full
+history on every request and once with trimming, and counts the input tokens
+of every request the agent would send. The conversation is shaped like real
+use: the first turn loads the DSM-5 skill and `disorders.json` (a large tool
+result), and later turns quiz and read notes using the real tools and files.
+
+```bash
+python benchmarks/token_benchmark.py                 # measured; needs an API key
+python benchmarks/token_benchmark.py --turns 50 --csv results.csv
+python benchmarks/token_benchmark.py --estimate      # rough, offline, no key
+```
+
+It uses Anthropic's token-counting endpoint, which counts a request without
+generating a reply. `--real-summary` has the model write the summaries
+instead of using a fixed stand-in, which costs a few small model calls.
+
+**Results** (30-turn chat, keeping the last 10 questions, model-written
+summaries, measured with the token-counting endpoint):
+
+| | Full history | Trimmed | Saved |
+|---|---:|---:|---:|
+| All 30 turns | 452,640 | 235,895 | 47.9% |
+| Turn 30 alone | 31,968 | 9,136 | 71.4% |
+
+Trimming doesn't make short chats cheaper: the two versions match until the
+history passes `MAX_HISTORY_TURNS`. It stops the context from growing without
+limit in long ones, where an early large tool result would otherwise be
+resent on every later request.
 
 ## Lessons learned
 - Thinking blocks are cryptographically tied to their conversation;

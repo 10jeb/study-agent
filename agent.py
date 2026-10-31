@@ -475,18 +475,28 @@ def _field(block, key: str):
 # ---------------------------------------------------------------------------
 # The agent loop
 # ---------------------------------------------------------------------------
-def ask(client, tools: FileTools, history: list, question: str, summary: str = "") -> str:
-    """Send a question and keep going until the model gives a final answer."""
-    history.append({"role": "user", "content": question})
+def build_system_prompt(summary: str = "") -> str:
+    """The system prompt for one request: base instructions, the skills
+    index, and the running summary if any history has been trimmed.
 
-    # Build the system prompt fresh each time rather than modifying the
-    # SYSTEM_PROMPT constant, so the base instructions never change.
+    Built fresh each time rather than modifying the SYSTEM_PROMPT constant,
+    so the base instructions never change. benchmarks/token_benchmark.py
+    uses this too, so it measures exactly what the agent sends.
+    """
     system = SYSTEM_PROMPT + skills_index()
     if summary:
         system += (
             "\n\nOlder messages were removed to save space. "
             f"Summary of the earlier conversation:\n{summary}"
         )
+    return system
+
+
+def ask(client, tools: FileTools, history: list, question: str, summary: str = "") -> str:
+    """Send a question and keep going until the model gives a final answer."""
+    history.append({"role": "user", "content": question})
+
+    system = build_system_prompt(summary)
 
     for _ in range(MAX_TOOL_ROUNDS):
         response = client.messages.create(
