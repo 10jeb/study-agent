@@ -143,6 +143,7 @@ benchmarks/           Token benchmark for history trimming
 .github/workflows/    GitHub Actions: runs the tests on every push
 Dockerfile            Runs the agent in a container
 .dockerignore         Files kept out of the Docker image
+.pre-commit-config.yaml   Runs gitleaks before each commit
 SKILLS.md             How skills work and how to write one
 requirements.txt      Python dependencies
 ```
@@ -168,26 +169,35 @@ at the top of `agent.py` (`MODEL`, `MAX_HISTORY_TURNS`, `MAX_TOOL_ROUNDS`).
 
 ## Run with Docker
 
-Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/),
+open and running. Tag the image with the commit it was built from rather
+than `latest`, so it's always clear which code an image contains:
 
 ```bash
-docker build -t study-agent .
-docker run -it --rm -e ANTHROPIC_API_KEY study-agent
+TAG=$(git rev-parse --short HEAD)
+docker build -t study-agent:$TAG .
+docker run -it --rm -e ANTHROPIC_API_KEY study-agent:$TAG
 ```
 
-`-e ANTHROPIC_API_KEY` passes in the key from your shell, so it is never
-stored in the image. To use your own notes, mount the folder read-only and
-pass its path in the container:
+`-it` gives you the chat prompt. `-e ANTHROPIC_API_KEY` passes the key from
+your shell, so it is never stored in the image. To keep the key in a file
+instead, create `.env` containing `ANTHROPIC_API_KEY=sk-ant-...` and use
+`--env-file .env`; `.env` is listed in `.gitignore` and `.dockerignore`.
+
+To use your own notes, mount the folder read-only and pass the path it
+has inside the container:
 
 ```bash
-docker run -it --rm -e ANTHROPIC_API_KEY -v ~/my-notes:/data:ro study-agent /data
+docker run -it --rm -e ANTHROPIC_API_KEY -v "$PWD/my-notes:/data:ro" study-agent:$TAG /data
 ```
 
 In a container, scripts the agent runs can only reach the container's own
 files and the folders you mount, and `:ro` stops them from changing your
-notes. That limits what a script can touch on your computer, though a
-container isn't a complete security boundary: scripts still have network
-access, for example.
+notes. A container isn't a complete security boundary, though: scripts
+still have network access, for example.
+
+**If the container exits right away,** run it without `--rm` and with a
+name (`--name agent`), then read what it printed with `docker logs agent`.
 
 ## Tests
 
@@ -202,6 +212,21 @@ They cover the path checks (including symlinks), history trimming and
 summarizing, and the cap on tool-use rounds. GitHub Actions runs them on
 every push, on the oldest and newest supported Python versions; the badge at
 the top of this page shows the latest result.
+
+## Secret scanning
+
+[gitleaks](https://github.com/gitleaks/gitleaks) checks for API keys and
+other secrets in two places:
+
+- **Before each commit**, as a pre-commit hook. Set it up once per clone:
+
+  ```bash
+  pip install pre-commit
+  pre-commit install
+  ```
+
+- **On every push**, in GitHub Actions, scanning the full history. This
+  catches anything committed without the hook.
 
 ## Benchmark
 
@@ -244,6 +269,16 @@ resent on every later request.
   guess wrong about how search worked.
 - Exact-match search fails on typos; next step is fuzzy matching or
   embeddings.
+- A missing dependency doesn't fail `docker build`: Docker only installs
+  what requirements.txt lists. The image built fine without `anthropic`
+  and crashed at `import anthropic` on run, so CI now imports the agent
+  inside the built image.
+- Checking inputs at startup turns mistakes into clear messages: a missing
+  API key or a wrong mount path stopped the agent immediately with an
+  explanation, while the unchecked missing package gave a raw traceback.
+- Tagging images with the commit SHA means rebuilding after every commit;
+  running `study-agent:$TAG` after a new commit found no image, and Docker
+  tried to pull one from Docker Hub instead.
 
 ## Next steps
 Deploying to AWS (S3 for files, Lambda for scripts), embedding-based

@@ -1,5 +1,11 @@
+# Hooks that run automatically before every `git commit`.
+# One-time setup in each clone:  pip install pre-commit && pre-commit install
+#
+# gitleaks scans the changes you're about to commit for API keys and other
+# secrets, and blocks the commit if it finds one. CI scans every push too
+# (see .github/workflows/tests.yml), since a local hook can be skipped.
 repos:
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.30.0
+    rev: v8.30.1
     hooks:
       - id: gitleaks
