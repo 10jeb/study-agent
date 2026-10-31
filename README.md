@@ -141,6 +141,8 @@ sample_docs/          Example folder for the agent to work on
 tests/                Unit tests that use a fake model client
 benchmarks/           Token benchmark for history trimming
 .github/workflows/    GitHub Actions: runs the tests on every push
+Dockerfile            Runs the agent in a container
+.dockerignore         Files kept out of the Docker image
 SKILLS.md             How skills work and how to write one
 requirements.txt      Python dependencies
 ```
@@ -163,6 +165,29 @@ python agent.py sample_docs
 To use your own files, pass a different folder: `python agent.py ~/my-notes`.
 Type `quit` to exit. The model, history length and tool-round limit are set
 at the top of `agent.py` (`MODEL`, `MAX_HISTORY_TURNS`, `MAX_TOOL_ROUNDS`).
+
+## Run with Docker
+
+Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+
+```bash
+docker build -t study-agent .
+docker run -it --rm -e ANTHROPIC_API_KEY study-agent
+```
+
+`-e ANTHROPIC_API_KEY` passes in the key from your shell, so it is never
+stored in the image. To use your own notes, mount the folder read-only and
+pass its path in the container:
+
+```bash
+docker run -it --rm -e ANTHROPIC_API_KEY -v ~/my-notes:/data:ro study-agent /data
+```
+
+In a container, scripts the agent runs can only reach the container's own
+files and the folders you mount, and `:ro` stops them from changing your
+notes. That limits what a script can touch on your computer, though a
+container isn't a complete security boundary: scripts still have network
+access, for example.
 
 ## Tests
 

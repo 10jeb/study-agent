@@ -34,3 +34,29 @@ jobs:
 
       - name: Check the benchmark still runs (offline estimate, 12 turns)
         run: python benchmarks/token_benchmark.py --estimate --turns 12
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build the image
+        run: docker build -t study-agent .
+
+      # A smoke test that needs no API key: inside the container, import the
+      # agent (proves dependencies installed), list the sample files and the
+      # skills (proves they were copied), and confirm it isn't running as root.
+      - name: Smoke test the image
+        run: |
+          docker run --rm --entrypoint python study-agent -c "
+          import os, agent
+          print(agent.FileTools('sample_docs').list_files())
+          print(agent.skills_index())
+          assert os.getuid() != 0, 'container is running as root'
+          "
+
+      - name: Check it refuses to start without an API key
+        run: |
+          if docker run --rm study-agent; then
+            echo "expected a non-zero exit without ANTHROPIC_API_KEY"; exit 1
+          fi

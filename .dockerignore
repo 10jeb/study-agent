@@ -1,0 +1,19 @@
+# Files Docker should never send into the build. Keeps the image small and
+# keeps local secrets and machine-specific files out of it.
+
+# Secrets
+.env
+
+# Local environment and caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Not needed to run the agent
+.git/
+.github/
+tests/
+benchmarks/
+*.csv
